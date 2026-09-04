@@ -14,6 +14,31 @@ function u16(n){return [n&255,(n>>8)&255]} function u32(n){return [n&255,(n>>8)&
 function ascii(s,len){const a=new Uint8Array(len);for(let i=0;i<Math.min(s.length,len);i++)a[i]=s.charCodeAt(i);return a}
 function put16(a,o,n){a[o]=n&255;a[o+1]=(n>>8)&255} function put32(a,o,n){a[o]=n&255;a[o+1]=(n>>8)&255;a[o+2]=(n>>16)&255;a[o+3]=(n>>24)&255}
 function rational(n,d=100){return [n,d]}
+// Convert EXIF values into little-endian byte arrays. This was missing before,
+// which caused the runtime error: "databytess is not defined" / "dataBytes is not defined".
+function dataBytes(type,count,val){
+  if(type===1){
+    if(val instanceof Uint8Array)return val;
+    return new Uint8Array(Array.isArray(val)?val:[val]);
+  }
+  if(type===2)return ascii(String(val),count);
+  if(type===3){
+    const a=new Uint8Array(count*2);const values=Array.isArray(val)?val:[val];
+    for(let i=0;i<count;i++)put16(a,i*2,Number(values[i]??0));
+    return a;
+  }
+  if(type===4){
+    const a=new Uint8Array(count*4);const values=Array.isArray(val)?val:[val];
+    for(let i=0;i<count;i++)put32(a,i*4,Number(values[i]??0));
+    return a;
+  }
+  if(type===5){
+    const a=new Uint8Array(count*8);const values=Array.isArray(val)&&Array.isArray(val[0])?val:[val];
+    for(let i=0;i<count;i++){const r=values[i]??[0,1];put32(a,i*8,Number(r[0]??0));put32(a,i*8+4,Number(r[1]??1));}
+    return a;
+  }
+  throw new Error('Unsupported EXIF field type: '+type);
+}
 function buildExif(){
   // Clean, GPS-free EXIF profile modeled on public Ray-Ban Meta JPEG samples.
   const entries=[]; const add=(tag,type,count,val)=>entries.push({tag,type,count,val});
