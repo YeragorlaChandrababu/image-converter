@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <title>Meta Photo Converter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <section class="card">
+      <div class="eyebrow">PHOTO TOOL</div>
+      <h1>Meta Photo Converter</h1>
+      <p class="subtitle">Resize a JPG/JPEG to 3024 × 4032 and optionally add custom EXIF metadata. Everything runs locally in your browser.</p>
+
+      <div class="actions">
+        <label class="button primary">
+          📷 Take Photo
+          <input id="cameraInput" type="file" accept="image/jpeg,image/jpg" capture="environment" hidden>
+        </label>
+        <label class="button secondary">
+          🖼️ Photo Library
+          <input id="fileInput" type="file" accept="image/jpeg,image/jpg" hidden>
+        </label>
+      </div>
+
+      <div id="dropzone" class="dropzone">
+        <strong>Tap to select a photo</strong>
+        <span>JPG / JPEG only</span>
+      </div>
+
+      <div id="status" class="status" hidden></div>
+
+      <div id="previewWrap" class="preview-wrap" hidden>
+        <img id="preview" alt="Selected photo preview">
+        <div class="preview-meta">
+          <span id="fileName">—</span>
+          <span id="dimensions">—</span>
+        </div>
+      </div>
+
+      <details class="metadata">
+        <summary>Metadata options</summary>
+        <p class="hint">Use only metadata that accurately describes your file. This tool does not certify that a photo was captured by Ray-Ban Meta glasses.</p>
+        <div class="grid">
+          <label>Make<input id="make" value="Ray-Ban"></label>
+          <label>Model<input id="model" value="Meta"></label>
+          <label>Software<input id="software" value="Meta AI"></label>
+          <label>Artist<input id="artist" placeholder="Optional"></label>
+        </div>
+        <label class="check"><input id="stripGps" type="checkbox" checked> Remove GPS/location metadata</label>
+      </details>
+
+      <button id="convertBtn" class="convert" disabled>⚡ CONVERT PHOTO</button>
+
+      <div id="result" class="result" hidden>
+        <div class="result-head">
+          <div><strong>Converted</strong><small id="resultInfo"></small></div>
+          <span class="badge">3024 × 4032</span>
+        </div>
+        <img id="resultPreview" alt="Converted photo preview">
+        <div class="actions result-actions">
+          <button id="saveBtn" class="button primary">💾 Save JPG</button>
+          <button id="shareBtn" class="button secondary">↗ Share</button>
+          <button id="base64Btn" class="button secondary">📋 Copy Base64</button>
+        </div>
+      </div>
+
+      <footer>🔒 Client-side processing • Your selected photo is not uploaded by this page</footer>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
