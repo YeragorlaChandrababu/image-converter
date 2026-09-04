@@ -1,71 +1,31 @@
 'use strict';
 const W=3024,H=4032,QUALITY=.95;
 let sourceFile=null,outputBlob=null,outputUrl=null;
+let gyroEnabled=false,gyroAngle=0,gyroBase=0;
 const $=id=>document.getElementById(id);
 const fileInput=$('fileInput'),cameraInput=$('cameraInput'),browseBtn=$('browseBtn'),dropzone=$('dropzone');
 const inputPreviewWrap=$('inputPreviewWrap'),inputPreview=$('inputPreview'),inputName=$('inputName'),inputSize=$('inputSize');
+const gyroBtn=$('gyroBtn'),gyroStatus=$('gyroStatus');
 function formatBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(2)+' MB'}
 function setFile(file){if(!file||!file.type.startsWith('image/'))return;sourceFile=file;$('sourceGrid').hidden=true;dropzone.hidden=true;$('settingsCard').hidden=false;$('clearBtn').hidden=false;inputPreviewWrap.hidden=false;inputName.textContent=file.name;inputSize.textContent=formatBytes(file.size);const u=URL.createObjectURL(file);inputPreview.src=u;inputPreview.onload=()=>URL.revokeObjectURL(u);$('resultCard').hidden=true;outputBlob=null}
 fileInput.onchange=e=>setFile(e.target.files[0]);cameraInput.onchange=e=>setFile(e.target.files[0]);browseBtn.onclick=()=>fileInput.click();
 ['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.add('drag')}));['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev,e=>{e.preventDefault();dropzone.classList.remove('drag')}));dropzone.addEventListener('drop',e=>setFile(e.dataTransfer.files[0]));
-function reset(){sourceFile=null;fileInput.value='';cameraInput.value='';$('sourceGrid').hidden=false;dropzone.hidden=false;$('settingsCard').hidden=true;$('resultCard').hidden=true;$('clearBtn').hidden=true;inputPreviewWrap.hidden=true;if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=null;outputBlob=null}
+function reset(){sourceFile=null;fileInput.value='';cameraInput.value='';$('sourceGrid').hidden=false;dropzone.hidden=false;$('settingsCard').hidden=true;$('resultCard').hidden=true;$('clearBtn').hidden=true;inputPreviewWrap.hidden=true;if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=null;outputBlob=null;gyroEnabled=false;gyroAngle=0;gyroBase=0;stopGyro();}
 $('clearBtn').onclick=reset;$('removeBtn').onclick=reset;
 function u16(n){return [n&255,(n>>8)&255]} function u32(n){return [n&255,(n>>8)&255,(n>>16)&255,(n>>24)&255]}
 function ascii(s,len){const a=new Uint8Array(len);for(let i=0;i<Math.min(s.length,len);i++)a[i]=s.charCodeAt(i);return a}
 function put16(a,o,n){a[o]=n&255;a[o+1]=(n>>8)&255} function put32(a,o,n){a[o]=n&255;a[o+1]=(n>>8)&255;a[o+2]=(n>>16)&255;a[o+3]=(n>>24)&255}
 function rational(n,d=100){return [n,d]}
-// Convert EXIF values into little-endian byte arrays. This was missing before,
-// which caused the runtime error: "databytess is not defined" / "dataBytes is not defined".
-function dataBytes(type,count,val){
-  if(type===1){
-    if(val instanceof Uint8Array)return val;
-    return new Uint8Array(Array.isArray(val)?val:[val]);
-  }
-  if(type===2)return ascii(String(val),count);
-  if(type===3){
-    const a=new Uint8Array(count*2);const values=Array.isArray(val)?val:[val];
-    for(let i=0;i<count;i++)put16(a,i*2,Number(values[i]??0));
-    return a;
-  }
-  if(type===4){
-    const a=new Uint8Array(count*4);const values=Array.isArray(val)?val:[val];
-    for(let i=0;i<count;i++)put32(a,i*4,Number(values[i]??0));
-    return a;
-  }
-  if(type===5){
-    const a=new Uint8Array(count*8);const values=Array.isArray(val)&&Array.isArray(val[0])?val:[val];
-    for(let i=0;i<count;i++){const r=values[i]??[0,1];put32(a,i*8,Number(r[0]??0));put32(a,i*8+4,Number(r[1]??1));}
-    return a;
-  }
-  throw new Error('Unsupported EXIF field type: '+type);
-}
-function buildExif(){
-  // Clean, GPS-free EXIF profile modeled on public Ray-Ban Meta JPEG samples.
-  const entries=[]; const add=(tag,type,count,val)=>entries.push({tag,type,count,val});
-  // 1 BYTE, 2 ASCII, 3 SHORT, 4 LONG, 5 RATIONAL
-  add(0x010F,2,8,'Meta AI\0');
-  add(0x0110,2,30,'Ray-Ban Meta Smart Glasses 2\0');
-  add(0x0112,3,1,1);
-  add(0x011A,5,1,rational(72,1)); add(0x011B,5,1,rational(72,1)); add(0x0128,3,1,2);
-  add(0x0131,2,10,'Meta AI\0');
-  add(0x0132,2,20,'2026:09:04 02:37:20\0');
-  add(0x9000,2,5,'0220\0'); add(0xA001,3,1,1); add(0xA002,4,1,W); add(0xA003,4,1,H);
-  add(0x9202,5,1,rational(22,10)); add(0x8827,3,1,70); add(0x829A,5,1,rational(1,400)); add(0xA405,3,1,13);
-  // Insert ExifIFD pointer as separate IFD0 entry is easier by rebuilding with only core entries + pointer.
-  const core=entries.filter(e=>e.tag!==0x9000&&e.tag!==0xA001&&e.tag!==0xA002&&e.tag!==0xA003&&e.tag!==0x9202&&e.tag!==0x8827&&e.tag!==0x829A&&e.tag!==0xA405);
-  const exifEntries=entries.filter(e=>[0x9000,0xA001,0xA002,0xA003,0x9202,0x8827,0x829A,0xA405].includes(e.tag)).sort((a,b)=>a.tag-b.tag);
-  const ifd0N=core.length+1, ifd0Len=2+ifd0N*12+4, exifN=exifEntries.length, exifLen=2+exifN*12+4;let off=8+ifd0Len;const exifOffset=off;off+=exifLen;const chunks2=[];
-  // Need chunk offsets relative TIFF; calculate sequentially per IFD.
-  const ifd0=new Uint8Array(ifd0Len);put16(ifd0,0,ifd0N);let q=2;
-  for(const e of core){put16(ifd0,q,e.tag);put16(ifd0,q+2,e.type);put32(ifd0,q+4,e.count);const bytes=dataBytes(e.type,e.count,e.val);let size=e.type===2?e.count:e.type===3?2*e.count:e.type===4?4*e.count:e.type===5?8*e.count:1;if(size<=4)ifd0.set(bytes.slice(0,4),q+8);else{put32(ifd0,q+8,off);chunks2.push({bytes});off+=size}q+=12}
-  put16(ifd0,q,0x8769);put16(ifd0,q+2,4);put32(ifd0,q+4,1);put32(ifd0,q+8,exifOffset);q+=12;put32(ifd0,q,0);
-  const exif=new Uint8Array(exifLen);put16(exif,0,exifN);q=2;for(const e of exifEntries){put16(exif,q,e.tag);put16(exif,q+2,e.type);put32(exif,q+4,e.count);const bytes=dataBytes(e.type,e.count,e.val);let size=e.type===2?e.count:e.type===3?2*e.count:e.type===4?4*e.count:8;if(size<=4)exif.set(bytes.slice(0,4),q+8);else{put32(exif,q+8,off);chunks2.push({bytes});off+=size}q+=12}put32(exif,q,0);
-  const total=8+ifd0.length+exif.length+chunks2.reduce((s,c)=>s+c.bytes.length,0);const tiff=new Uint8Array(total);tiff.set([0x49,0x49,0x2A,0x00,8,0,0,0],0);tiff.set(ifd0,8);tiff.set(exif,exifOffset);let co=8+ifd0.length+exif.length;for(const c of chunks2){tiff.set(c.bytes,co);co+=c.bytes.length}
-  const id=new TextEncoder().encode('Exif\0\0');const app1Len=tiff.length+id.length+2;const app=new Uint8Array(2+2+app1Len);app.set([0xFF,0xE1,app1Len>>8,app1Len&255],0);app.set(id,4);app.set(tiff,10);return app;
-}
+function dataBytes(type,count,val){if(type===1){if(val instanceof Uint8Array)return val;return new Uint8Array(Array.isArray(val)?val:[val])}if(type===2)return ascii(String(val),count);if(type===3){const a=new Uint8Array(count*2),values=Array.isArray(val)?val:[val];for(let i=0;i<count;i++)put16(a,i*2,Number(values[i]??0));return a}if(type===4){const a=new Uint8Array(count*4),values=Array.isArray(val)?val:[val];for(let i=0;i<count;i++)put32(a,i*4,Number(values[i]??0));return a}if(type===5){const a=new Uint8Array(count*8),values=Array.isArray(val)&&Array.isArray(val[0])?val:[val];for(let i=0;i<count;i++){const r=values[i]??[0,1];put32(a,i*8,Number(r[0]??0));put32(a,i*8+4,Number(r[1]??1))}return a}throw new Error('Unsupported EXIF field type: '+type)}
+function buildExif(){const entries=[],add=(tag,type,count,val)=>entries.push({tag,type,count,val});add(0x010F,2,8,'Meta AI\0');add(0x0110,2,30,'Ray-Ban Meta Smart Glasses 2\0');add(0x0112,3,1,1);add(0x011A,5,1,rational(72,1));add(0x011B,5,1,rational(72,1));add(0x0128,3,1,2);add(0x0131,2,10,'Meta AI\0');add(0x0132,2,20,'2026:09:04 02:37:20\0');add(0x9000,2,5,'0220\0');add(0xA001,3,1,1);add(0xA002,4,1,W);add(0xA003,4,1,H);add(0x9202,5,1,rational(22,10));add(0x8827,3,1,70);add(0x829A,5,1,rational(1,400));add(0xA405,3,1,13);const core=entries.filter(e=>![0x9000,0xA001,0xA002,0xA003,0x9202,0x8827,0x829A,0xA405].includes(e.tag));const exifEntries=entries.filter(e=>[0x9000,0xA001,0xA002,0xA003,0x9202,0x8827,0x829A,0xA405].includes(e.tag)).sort((a,b)=>a.tag-b.tag);const ifd0N=core.length+1,ifd0Len=2+ifd0N*12+4,exifN=exifEntries.length,exifLen=2+exifN*12+4;let off=8+ifd0Len;const exifOffset=off;off+=exifLen;const chunks2=[],ifd0=new Uint8Array(ifd0Len);put16(ifd0,0,ifd0N);let q=2;for(const e of core){put16(ifd0,q,e.tag);put16(ifd0,q+2,e.type);put32(ifd0,q+4,e.count);const bytes=dataBytes(e.type,e.count,e.val),size=e.type===2?e.count:e.type===3?2*e.count:e.type===4?4*e.count:e.type===5?8*e.count:1;if(size<=4)ifd0.set(bytes.slice(0,4),q+8);else{put32(ifd0,q+8,off);chunks2.push({bytes});off+=size}q+=12}put16(ifd0,q,0x8769);put16(ifd0,q+2,4);put32(ifd0,q+4,1);put32(ifd0,q+8,exifOffset);q+=12;put32(ifd0,q,0);const exif=new Uint8Array(exifLen);put16(exif,0,exifN);q=2;for(const e of exifEntries){put16(exif,q,e.tag);put16(exif,q+2,e.type);put32(exif,q+4,e.count);const bytes=dataBytes(e.type,e.count,e.val),size=e.type===2?e.count:e.type===3?2*e.count:e.type===4?4*e.count:8;if(size<=4)exif.set(bytes.slice(0,4),q+8);else{put32(exif,q+8,off);chunks2.push({bytes});off+=size}q+=12}put32(exif,q,0);const total=8+ifd0.length+exif.length+chunks2.reduce((s,c)=>s+c.bytes.length,0),tiff=new Uint8Array(total);tiff.set([0x49,0x49,0x2A,0x00,8,0,0,0],0);tiff.set(ifd0,8);tiff.set(exif,exifOffset);let co=8+ifd0.length+exif.length;for(const c of chunks2){tiff.set(c.bytes,co);co+=c.bytes.length}const id=new TextEncoder().encode('Exif\0\0'),app1Len=tiff.length+id.length+2,app=new Uint8Array(2+2+app1Len);app.set([0xFF,0xE1,app1Len>>8,app1Len&255],0);app.set(id,4);app.set(tiff,10);return app}
 function injectExif(jpeg){const bytes=new Uint8Array(jpeg);if(bytes[0]!==0xFF||bytes[1]!==0xD8)throw new Error('Not JPEG');const exif=buildExif();let pos=2;while(pos+4<bytes.length&&bytes[pos]===0xFF){const marker=bytes[pos+1];if(marker===0xDA||marker===0xD9)break;const len=(bytes[pos+2]<<8)|bytes[pos+3];if(marker===0xE1&&new TextDecoder().decode(bytes.slice(pos+4,pos+10))==='Exif\0\0')return new Blob([bytes.slice(0,pos),exif,bytes.slice(pos+2+len)],{type:'image/jpeg'});pos+=2+len}return new Blob([bytes.slice(0,2),exif,bytes.slice(2)],{type:'image/jpeg'})}
-async function makeJpeg(file){const img=await createImageBitmap(file);const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d',{alpha:false});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const srcRatio=img.width/img.height,dstRatio=W/H;let sw=img.width,sh=img.height,sx=0,sy=0;if(srcRatio>dstRatio){sw=Math.round(img.height*dstRatio);sx=Math.round((img.width-sw)/2)}else if(srcRatio<dstRatio){sh=Math.round(img.width/dstRatio);sy=Math.round((img.height-sh)/2)}ctx.drawImage(img,sx,sy,sw,sh,0,0,W,H);const raw=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('JPEG export failed')),'image/jpeg',QUALITY));img.close();return injectExif(await raw.arrayBuffer())}
-$('convertBtn').onclick=async()=>{if(!sourceFile)return;const btn=$('convertBtn'),bar=$('progressBar');btn.disabled=true;$('progress').hidden=false;bar.style.width='20%';try{await new Promise(r=>setTimeout(r,40));bar.style.width='55%';outputBlob=await makeJpeg(sourceFile);bar.style.width='100%';if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(outputBlob);$('outputPreview').src=outputUrl;$('resultCard').hidden=false;$('resultSummary').textContent=`${formatBytes(outputBlob.size)} JPEG · clean GPS-free EXIF profile`;$('resultCard').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){alert('Could not convert this image: '+e.message)}finally{btn.disabled=false;setTimeout(()=>{$('progress').hidden=true;bar.style.width='0'},300)}};
+function normalizeAngle(a){a=((a%360)+360)%360;return a>180?a-360:a}
+function handleOrientation(e){let a;if(typeof e.alpha==='number'&&typeof e.beta==='number'&&typeof e.gamma==='number'){const portrait=Math.abs(e.gamma)<=45;a=portrait?e.gamma:e.beta}if(typeof a==='number'){gyroAngle=normalizeAngle(a-gyroBase);const clamped=Math.max(-90,Math.min(90,gyroAngle));inputPreview.style.transform=`rotate(${clamped}deg)`;inputPreview.style.transition='transform .08s linear';const out=$('outputPreview');if(out)out.style.transform=`rotate(${clamped}deg)`;gyroStatus.textContent=`Live · ${Math.round(clamped)}° · rotate your phone to move the preview`}}
+async function startGyro(){if(!('DeviceOrientationEvent'in window)){gyroStatus.textContent='Motion sensors are not supported on this device.';return}try{if(typeof DeviceOrientationEvent.requestPermission==='function'){const permission=await DeviceOrientationEvent.requestPermission();if(permission!=='granted')throw new Error('Motion permission was denied')}gyroBase=0;gyroAngle=0;gyroEnabled=true;window.addEventListener('deviceorientation',handleOrientation,true);gyroBtn.textContent='Gyro On · Calibrate';gyroStatus.textContent='Move the phone slowly. Tap again to recalibrate.'}catch(e){gyroStatus.textContent='Motion permission is required. Tap Enable Gyro again and allow access.'}}
+function stopGyro(){window.removeEventListener('deviceorientation',handleOrientation,true);if(gyroBtn){gyroBtn.textContent='Enable Gyro';gyroStatus.textContent='Use your phone’s motion sensor to rotate the preview.';inputPreview.style.transform='';if($('outputPreview'))$('outputPreview').style.transform=''}}
+gyroBtn.onclick=async()=>{if(!gyroEnabled){await startGyro()}else{gyroBase=0;gyroAngle=0;gyroStatus.textContent='Calibrated at the current phone position.'}};
+async function makeJpeg(file){const img=await createImageBitmap(file),canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;const ctx=canvas.getContext('2d',{alpha:false});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const srcRatio=img.width/img.height,dstRatio=W/H;let sw=img.width,sh=img.height,sx=0,sy=0;if(srcRatio>dstRatio){sw=Math.round(img.height*dstRatio);sx=Math.round((img.width-sw)/2)}else if(srcRatio<dstRatio){sh=Math.round(img.width/dstRatio);sy=Math.round((img.height-sh)/2)}ctx.drawImage(img,sx,sy,sw,sh,0,0,W,H);const raw=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('JPEG export failed')),'image/jpeg',QUALITY));img.close();return injectExif(await raw.arrayBuffer())}
+$('convertBtn').onclick=async()=>{if(!sourceFile)return;const btn=$('convertBtn'),bar=$('progressBar');btn.disabled=true;$('progress').hidden=false;bar.style.width='20%';try{await new Promise(r=>setTimeout(r,40));bar.style.width='55%';outputBlob=await makeJpeg(sourceFile);bar.style.width='100%';if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(outputBlob);$('outputPreview').src=outputUrl;$('resultCard').hidden=false;$('resultSummary').textContent=`${formatBytes(outputBlob.size)} JPEG · clean GPS-free EXIF profile`;if(gyroEnabled)handleOrientation({alpha:0,beta:0,gamma:gyroAngle});$('resultCard').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){alert('Could not convert this image: '+e.message)}finally{btn.disabled=false;setTimeout(()=>{$('progress').hidden=true;bar.style.width='0'},300)}};
 $('saveBtn').onclick=()=>{if(!outputBlob)return;const a=document.createElement('a');a.href=outputUrl;a.download='meta-photo-3024x4032.jpg';document.body.appendChild(a);a.click();a.remove();$('shareStatus').textContent='Saved as JPEG.'};
-$('shareBtn').onclick=async()=>{if(!outputBlob)return;try{if(navigator.canShare&&navigator.canShare({files:[new File([outputBlob],'meta-photo.jpg',{type:'image/jpeg'})]})){await navigator.share({files:[new File([outputBlob],'meta-photo.jpg',{type:'image/jpeg'})],title:'Meta Photo'});$('shareStatus').textContent='Share sheet opened.'}else{$('saveBtn').click();$('shareStatus').textContent='Direct sharing is unavailable; JPEG saved instead.'}}catch(e){if(e.name!=='AbortError')$('shareStatus').textContent='Sharing was cancelled.'}};
+$('shareBtn').onclick=async()=>{if(!outputBlob)return;try{if(navigator.canShare&&navigator.canShare({files:[new File([outputBlob],'meta-photo.jpg',{type:'image/jpeg'})]})){await navigator.share({files:[new File([outputBlob],'meta-photo.jpg',{type:'image/jpeg'})],title:'Meta Photo'});$('shareStatus').textContent='Share sheet opened. Instagram can display the saved frame, but gyro motion is not carried into a JPEG.'}else{$('saveBtn').click();$('shareStatus').textContent='Direct sharing is unavailable; JPEG saved instead.'}}catch(e){if(e.name!=='AbortError')$('shareStatus').textContent='Sharing was cancelled.'}};
 $('base64Btn').onclick=async()=>{if(!outputBlob)return;const reader=new FileReader();reader.onload=async()=>{const b64=reader.result.split(',')[1];try{await navigator.clipboard.writeText(b64);$('shareStatus').textContent=`Base64 copied · ${(b64.length/1024).toFixed(0)} KB`;}catch{prompt('Copy Base64:',b64)}};reader.readAsDataURL(outputBlob)};
