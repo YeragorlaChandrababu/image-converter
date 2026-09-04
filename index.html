@@ -11,60 +11,14 @@
 <body>
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="noise"></div>
   <main class="shell">
-    <header class="topbar">
-      <a class="brand" href="#top" aria-label="Meta Photo Lab home">
-        <span class="brand-mark"><span></span></span>
-        <span class="brand-copy"><strong>Meta Photo Lab</strong><small>Local photo formatter</small></span>
-      </a>
-      <div class="privacy"><i></i><span>100% on-device</span></div>
-    </header>
-
-    <div id="top" class="hero">
-      <div class="hero-copy">
-        <div class="eyebrow"><span></span> RAY-BAN META PHOTO FORMATTER</div>
-        <h1>Make your photo feel<br><em>glasses-native.</em></h1>
-        <p>Crop, optimize and export a clean 3:4 JPEG locally in your browser. No upload, no account, no server processing.</p>
-        <div class="hero-points"><span>✓ 3:4 portrait</span><span>✓ GPS removed</span><span>✓ Motion preview</span></div>
-      </div>
-      <div class="hero-badge" aria-hidden="true"><div class="badge-ring"><span>3:4</span><small>PHOTO</small></div></div>
-    </div>
-
-    <nav class="workflow" aria-label="Workflow">
-      <div class="flow active"><b>01</b><span>Add photo</span></div><div class="flow-line"></div><div class="flow"><b>02</b><span>Format</span></div><div class="flow-line"></div><div class="flow"><b>03</b><span>Export</span></div>
-    </nav>
-
-    <section class="card workspace" id="uploadSection">
-      <div class="section-head"><div class="section-title"><span class="step">01</span><div><h2>Add your photo</h2><p>Choose a photo or take one with your phone camera.</p></div></div><button class="text-btn" id="clearBtn" hidden>Start over</button></div>
-      <div class="source-grid" id="sourceGrid">
-        <label class="source-card"><input id="cameraInput" type="file" accept="image/*" capture="environment"><span class="source-icon camera-icon"><i></i></span><strong>Take Photo</strong><small>Open camera</small><span class="card-arrow">↗</span></label>
-        <label class="source-card"><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp"><span class="source-icon gallery-icon"><i></i></span><strong>Photo Library</strong><small>Choose from device</small><span class="card-arrow">↗</span></label>
-      </div>
-      <div class="dropzone" id="dropzone"><span class="upload-cloud">↑</span><span>Drop an image here</span><span class="drop-or">or</span><button class="browse-btn" id="browseBtn" type="button">Browse files</button></div>
-      <div class="preview-wrap" id="inputPreviewWrap" hidden>
-        <div class="preview-card"><div class="preview-image"><img id="inputPreview" alt="Selected photo"><span class="preview-chip">SOURCE</span></div><div class="preview-meta"><div><strong id="inputName">—</strong><span id="inputSize">—</span></div><button class="icon-btn" id="removeBtn" type="button" aria-label="Remove photo">×</button></div></div>
-      </div>
-    </section>
-
-    <section class="card settings" id="settingsCard" hidden>
-      <div class="section-head"><div class="section-title"><span class="step">02</span><div><h2>Format & profile</h2><p>Prepared for a clean, portrait-oriented JPEG export.</p></div></div><span class="local-pill">LOCAL</span></div>
-      <div class="settings-grid">
-        <div class="setting"><span>Output</span><strong>3024 × 4032</strong><small>3:4 portrait</small><b>↗</b></div>
-        <div class="setting"><span>Camera profile</span><strong>Ray-Ban Meta 2</strong><small>Meta AI · smart glasses</small><b>◉</b></div>
-        <div class="setting"><span>JPEG quality</span><strong>95%</strong><small>High quality export</small><b>✦</b></div>
-      </div>
-      <div class="crop-note"><span class="check">✓</span><span><strong>Smart center crop</strong><small>Preserves the 3:4 ratio without stretching. Original GPS/private EXIF is not copied.</small></span></div>
-      <div class="gyro-panel" id="gyroPanel"><div class="gyro-visual"><span>↻</span></div><div class="gyro-copy"><strong>Motion Preview <em>BETA</em></strong><small id="gyroStatus">Use your phone’s motion sensor to rotate the preview.</small></div><button class="secondary-action gyro-btn" id="gyroBtn" type="button">Enable Gyro <span>→</span></button></div>
-      <button class="convert-btn" id="convertBtn" type="button"><span>Convert photo</span><span class="arrow">→</span></button>
-      <div class="progress" id="progress" hidden><div class="progress-bar" id="progressBar"></div></div>
-    </section>
-
-    <section class="card result" id="resultCard" hidden>
-      <div class="section-head"><div class="section-title"><span class="step">03</span><div><h2>Ready to save</h2><p id="resultSummary">Your formatted image is ready.</p></div></div><span class="ready"><i></i> Ready</span></div>
-      <div class="result-grid"><div class="output-frame"><span class="output-chip">OUTPUT · 3:4</span><img id="outputPreview" alt="Converted photo"></div><div class="result-info"><div class="result-title">Export details</div><div class="spec-row"><span>Dimensions</span><strong>3024 × 4032 px</strong></div><div class="spec-row"><span>EXIF profile</span><strong>Meta AI / Ray-Ban Meta Smart Glasses 2</strong></div><div class="spec-row"><span>GPS</span><strong class="removed">Removed</strong></div><div class="actions"><button class="primary-action" id="saveBtn" type="button">Save JPG <span>↓</span></button><button class="secondary-action" id="shareBtn" type="button">Share <span>↗</span></button><button class="secondary-action" id="base64Btn" type="button">Copy Base64 <span>⌘</span></button></div><div class="share-status" id="shareStatus"></div></div></div>
-    </section>
-
+    <header class="topbar"><a class="brand" href="#top" aria-label="Meta Photo Lab home"><span class="brand-mark"><span></span></span><span class="brand-copy"><strong>Meta Photo Lab</strong><small>Local photo formatter</small></span></a><div class="privacy"><i></i><span>100% on-device</span></div></header>
+    <div id="top" class="hero"><div class="hero-copy"><div class="eyebrow"><span></span> RAY-BAN META PHOTO FORMATTER</div><h1>Make your photo feel<br><em>glasses-native.</em></h1><p>Crop, optimize and export a clean 3:4 JPEG locally in your browser. No upload, no account, no server processing.</p><div class="hero-points"><span>✓ 3:4 portrait</span><span>✓ GPS removed</span><span>✓ Motion preview</span></div></div><div class="hero-badge" aria-hidden="true"><div class="badge-ring"><span>3:4</span><small>PHOTO</small></div></div></div>
+    <nav class="workflow" aria-label="Workflow"><div class="flow active"><b>01</b><span>Add photo</span></div><div class="flow-line"></div><div class="flow"><b>02</b><span>Format</span></div><div class="flow-line"></div><div class="flow"><b>03</b><span>Export</span></div></nav>
+    <section class="card workspace" id="uploadSection"><div class="section-head"><div class="section-title"><span class="step">01</span><div><h2>Add your photo</h2><p>Choose a photo or take one with your phone camera.</p></div></div><button class="text-btn" id="clearBtn" hidden>Start over</button></div><div class="source-grid" id="sourceGrid"><label class="source-card"><input id="cameraInput" type="file" accept="image/*" capture="environment"><span class="source-icon camera-icon"><i></i></span><strong>Take Photo</strong><small>Open camera</small><span class="card-arrow">↗</span></label><label class="source-card"><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp"><span class="source-icon gallery-icon"><i></i></span><strong>Photo Library</strong><small>Choose from device</small><span class="card-arrow">↗</span></label></div><div class="dropzone" id="dropzone"><span class="upload-cloud">↑</span><span>Drop an image here</span><span class="drop-or">or</span><button class="browse-btn" id="browseBtn" type="button">Browse files</button></div><div class="preview-wrap" id="inputPreviewWrap" hidden><div class="preview-card"><div class="preview-image"><img id="inputPreview" alt="Selected photo"><span class="preview-chip">SOURCE</span></div><div class="preview-meta"><div><strong id="inputName">—</strong><span id="inputSize">—</span></div><button class="icon-btn" id="removeBtn" type="button" aria-label="Remove photo">×</button></div></div></div></section>
+    <section class="card settings" id="settingsCard" hidden><div class="section-head"><div class="section-title"><span class="step">02</span><div><h2>Format & profile</h2><p>Prepared for a clean, portrait-oriented JPEG export.</p></div></div><span class="local-pill">LOCAL</span></div><div class="settings-grid"><div class="setting"><span>Output</span><strong>3024 × 4032</strong><small>3:4 portrait</small><b>↗</b></div><div class="setting"><span>Camera profile</span><strong>Ray-Ban Meta 2</strong><small>Meta AI · smart glasses</small><b>◉</b></div><div class="setting"><span>JPEG quality</span><strong>95%</strong><small>High quality export</small><b>✦</b></div></div><div class="crop-note"><span class="check">✓</span><span><strong>Smart center crop</strong><small>Preserves the 3:4 ratio without stretching. Original GPS/private EXIF is not copied.</small></span></div>
+      <div class="gyro-panel" id="gyroPanel"><div class="gyro-visual" aria-hidden="true"><div class="gyro-orbit"><span></span></div><strong>↔</strong></div><div class="gyro-copy"><div class="gyro-heading"><strong>Motion Preview</strong><em id="gyroBadge">BETA</em></div><small id="gyroStatus">Use your phone’s motion sensor to rotate the preview.</small></div><button class="gyro-control" id="gyroBtn" type="button"><span class="gyro-control-icon">◉</span><span class="gyro-control-label">Enable Gyro</span><span class="gyro-control-arrow">→</span></button></div>
+      <button class="convert-btn" id="convertBtn" type="button"><span>Convert photo</span><span class="arrow">→</span></button><div class="progress" id="progress" hidden><div class="progress-bar" id="progressBar"></div></div></section>
+    <section class="card result" id="resultCard" hidden><div class="section-head"><div class="section-title"><span class="step">03</span><div><h2>Ready to save</h2><p id="resultSummary">Your formatted image is ready.</p></div></div><span class="ready"><i></i> Ready</span></div><div class="result-grid"><div class="output-frame"><span class="output-chip">OUTPUT · 3:4</span><img id="outputPreview" alt="Converted photo"></div><div class="result-info"><div class="result-title">Export details</div><div class="spec-row"><span>Dimensions</span><strong>3024 × 4032 px</strong></div><div class="spec-row"><span>EXIF profile</span><strong>Meta AI / Ray-Ban Meta Smart Glasses 2</strong></div><div class="spec-row"><span>GPS</span><strong class="removed">Removed</strong></div><div class="actions"><button class="primary-action" id="saveBtn" type="button">Save JPG <span>↓</span></button><button class="secondary-action" id="shareBtn" type="button">Share <span>↗</span></button><button class="secondary-action" id="base64Btn" type="button">Copy Base64 <span>⌘</span></button></div><div class="share-status" id="shareStatus"></div></div></div></section>
     <footer><span>🔒 Your photos never leave this device.</span><span>Independent tool · not affiliated with Meta, Ray-Ban or Instagram.</span></footer>
-  </main>
-  <script src="app.js"></script>
-</body>
-</html>
+  </main><script src="app.js"></script>
+</body></html>
